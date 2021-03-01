@@ -78,14 +78,14 @@ class TrainingInstance(object):
 
   def __str__(self):
     s = ""
-    s += "tokens: %s\n" % (" ".join(
-        [tokenization.printable_text(x) for x in self.tokens]))
-    s += "segment_ids: %s\n" % (" ".join([str(x) for x in self.segment_ids]))
+    s += "tokens: %s\n" % " ".join(
+        tokenization.printable_text(x) for x in self.tokens)
+    s += "segment_ids: %s\n" % " ".join(str(x) for x in self.segment_ids)
     s += "is_random_next: %s\n" % self.is_random_next
-    s += "masked_lm_positions: %s\n" % (" ".join(
-        [str(x) for x in self.masked_lm_positions]))
-    s += "masked_lm_labels: %s\n" % (" ".join(
-        [tokenization.printable_text(x) for x in self.masked_lm_labels]))
+    s += "masked_lm_positions: %s\n" % " ".join(
+        str(x) for x in self.masked_lm_positions)
+    s += "masked_lm_labels: %s\n" % " ".join(
+        tokenization.printable_text(x) for x in self.masked_lm_labels)
     s += "\n"
     return s
 
@@ -96,10 +96,9 @@ class TrainingInstance(object):
 def write_instance_to_example_files(instances, tokenizer, max_seq_length,
                                     max_predictions_per_seq, output_files):
   """Create TF example files from `TrainingInstance`s."""
-  writers = []
-  for output_file in output_files:
-    writers.append(tf.python_io.TFRecordWriter(output_file))
-
+  writers = [
+      tf.python_io.TFRecordWriter(output_file) for output_file in output_files
+  ]
   writer_index = 0
 
   total_written = 0
@@ -147,8 +146,8 @@ def write_instance_to_example_files(instances, tokenizer, max_seq_length,
 
     if inst_index < 20:
       tf.logging.info("*** Example ***")
-      tf.logging.info("tokens: %s" % " ".join(
-          [tokenization.printable_text(x) for x in instance.tokens]))
+      tf.logging.info(("tokens: %s" % " ".join(
+          tokenization.printable_text(x) for x in instance.tokens)))
 
       for feature_name in features.keys():
         feature = features[feature_name]
@@ -157,8 +156,7 @@ def write_instance_to_example_files(instances, tokenizer, max_seq_length,
           values = feature.int64_list.value
         elif feature.float_list.value:
           values = feature.float_list.value
-        tf.logging.info(
-            "%s: %s" % (feature_name, " ".join([str(x) for x in values])))
+        tf.logging.info("%s: %s" % (feature_name, " ".join(str(x) for x in values)))
 
   for writer in writers:
     writer.close()
@@ -167,13 +165,11 @@ def write_instance_to_example_files(instances, tokenizer, max_seq_length,
 
 
 def create_int_feature(values):
-  feature = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
-  return feature
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
 
 
 def create_float_feature(values):
-  feature = tf.train.Feature(float_list=tf.train.FloatList(value=list(values)))
-  return feature
+  return tf.train.Feature(float_list=tf.train.FloatList(value=list(values)))
 
 
 def create_training_instances(input_files, tokenizer, max_seq_length,
@@ -345,7 +341,7 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
 
   cand_indexes = []
   for (i, token) in enumerate(tokens):
-    if token == "[CLS]" or token == "[SEP]":
+    if token in ["[CLS]", "[SEP]"]:
       continue
     # Whole Word Masking means that if we mask all of the wordpieces
     # corresponding to an original word. When a word has been split into
@@ -378,11 +374,7 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
     # predictions, then just skip this candidate.
     if len(masked_lms) + len(index_set) > num_to_predict:
       continue
-    is_any_index_covered = False
-    for index in index_set:
-      if index in covered_indexes:
-        is_any_index_covered = True
-        break
+    is_any_index_covered = any(index in covered_indexes for index in index_set)
     if is_any_index_covered:
       continue
     for index in index_set:
